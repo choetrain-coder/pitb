@@ -45,7 +45,7 @@ create table if not exists bookings (
   status text not null default 'confirmed',
   user_id uuid,
   created_at timestamptz not null default now(),
-  constraint bookings_room_time_excl exclude
+  constraint bookings_room_time_excl exclude using gist
     (room_id with =, tstzrange(start_time, end_time, '[)') with &&)
     where (status = 'confirmed')
 );
