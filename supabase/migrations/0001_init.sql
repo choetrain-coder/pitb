@@ -1,5 +1,6 @@
 -- Room Booking System — schema + seed data
 -- Demo-first: open access via permissive RLS (lock-down sprint replaces these)
+create extension if not exists btree_gist;
 
 -- USERS
 create table if not exists users (
@@ -64,6 +65,8 @@ create table if not exists delegations (
   created_at timestamptz not null default now()
 );
 alter table delegations enable row level security;
+create unique index if not exists delegations_user_pair_unique
+  on delegations (delegator_user_id, delegate_user_id);
 drop policy if exists "delegations_v1_read" on delegations;
 create policy "delegations_v1_read" on delegations for select using (true);
 drop policy if exists "delegations_v1_write" on delegations;
@@ -103,15 +106,15 @@ on conflict (id) do nothing;
 
 -- SEED: Bookings
 insert into bookings (id, room_id, booked_by_user_id, title, start_time, end_time, status) values
-  ('c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'Quarterly Review', '2025-01-15 10:00+00', '2025-01-15 11:00+00', 'confirmed'),
-  ('c0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000002', 'Daily Standup', '2025-01-15 09:00+00', '2025-01-15 09:30+00', 'confirmed'),
-  ('c0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000001', 'Client Presentation', '2025-01-16 14:00+00', '2025-01-16 15:30+00', 'confirmed'),
-  ('c0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000004', 'Sprint Planning', '2025-01-17 10:30+00', '2025-01-17 12:00+00', 'confirmed'),
-  ('c0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000002', 'All-hands Prep', '2025-01-17 15:00+00', '2025-01-17 16:00+00', 'confirmed')
+  ('c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'Quarterly Review', date_trunc('day', now()) + interval '1 day 2 hours', date_trunc('day', now()) + interval '1 day 3 hours', 'confirmed'),
+  ('c0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000002', 'Daily Standup', date_trunc('day', now()) + interval '1 day 1 hour', date_trunc('day', now()) + interval '1 day 1 hour 30 minutes', 'confirmed'),
+  ('c0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000001', 'Client Presentation', date_trunc('day', now()) + interval '2 days 6 hours', date_trunc('day', now()) + interval '2 days 7 hours 30 minutes', 'confirmed'),
+  ('c0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000004', 'Sprint Planning', date_trunc('day', now()) + interval '3 days 2 hours 30 minutes', date_trunc('day', now()) + interval '3 days 4 hours', 'confirmed'),
+  ('c0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000002', 'All-hands Prep', date_trunc('day', now()) + interval '3 days 7 hours', date_trunc('day', now()) + interval '3 days 8 hours', 'confirmed')
 on conflict (id) do nothing;
 
 -- SEED: Delegations
 insert into delegations (delegator_user_id, delegate_user_id, is_active) values
   ('a0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000003', true),
   ('a0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', true)
-on conflict (id) do nothing;
+on conflict (delegator_user_id, delegate_user_id) do nothing;
