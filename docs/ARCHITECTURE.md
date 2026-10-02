@@ -5,8 +5,8 @@
 - TailwindCSS + fullcalendar or react-big-calendar for Outlook-style views
 
 ## Build Now vs Later
-- **Now:** rooms CRUD, bookings CRUD with clash prevention, calendar views (month/week/day), user registration, delegation, audit log — all demo-first (no login wall)
-- **Later:** auth lock-down (company email login + per-user RLS), email notifications, recurring bookings, analytics dashboard
+- **Now:** rooms CRUD, bookings CRUD with clash prevention, calendar views (month/week/day), user registration, delegation, audit log, verified email sign-in, and team-scoped RLS
+- **Later:** email notifications, recurring bookings, analytics dashboard
 
 ## Key User Action Flow (Book a Room)
 1. User opens calendar → sees month/week/day view with existing bookings shaded

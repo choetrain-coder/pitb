@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { signOut } from "@/app/logout/actions";
 import { cancelBooking, checkAvailability, createBooking, createWorkspaceTeam, loadWorkspace, moveBooking, registerUser, saveRoom, setDelegation, setRoomActive } from "@/lib/actions";
 import type { Booking, Room, Person, WorkspaceData } from "@/lib/data";
 type Tab = "calendar" | "bookings" | "rooms" | "people" | "delegations" | "activity" | "teams";
@@ -14,7 +15,7 @@ const timeLabel = (v: string) => new Date(v).toLocaleTimeString([], { hour: "num
 const errorText = (s: string) => /relation .* does not exist|schema cache|could not find the table/i.test(s) ? "The booking tables are not available in Supabase yet. Apply supabase/migrations/0001_init.sql to this project, then retry." : s;
 const glyph = (symbol: string) => <span className="nav-glyph" aria-hidden="true">{symbol}</span>;
 
-export default function Workspace() {
+export default function Workspace({ currentUserId }: { currentUserId: string }) {
   const [data, setData] = useState<WorkspaceData>(empty);
   const [actorId, setActorId] = useState("");
   const [teamDraft, setTeamDraft] = useState(false);
@@ -36,10 +37,10 @@ export default function Workspace() {
     if (r.ok && r.data) {
       setData(r.data); setLoadError("");
       if (typeof window !== "undefined") window.localStorage.setItem("pitb-active-team", r.data.team.id);
-      setActorId((old) => r.data!.users.some((u) => u.id === old) ? old : (r.data!.users.find((u) => u.role === "admin") || r.data!.users[0])?.id || "");
+      setActorId((old) => r.data!.users.some((u) => u.id === old) ? old : (r.data!.users.find((u) => u.id === currentUserId) || r.data!.users[0])?.id || "");
     } else setLoadError(errorText("error" in r ? r.error : "Workspace data was unavailable."));
     setLoading(false);
-  }, []);
+  }, [currentUserId]);
   useEffect(() => { void reload(typeof window === "undefined" ? undefined : window.localStorage.getItem("pitb-active-team") || undefined); }, [reload]);
   const actor = data.users.find((u) => u.id === actorId) || data.users[0];
   const rooms = useMemo(() => new Map(data.rooms.map((r) => [r.id, r])), [data.rooms]);
@@ -74,7 +75,7 @@ export default function Workspace() {
       <div className="side-caption">WORKSPACE</div><nav>{nav.map(([id,label,symbol]) => <button key={id} className={tab === id ? "nav-item nav-active" : "nav-item"} onClick={() => { setTab(id); setError(""); setMessage(""); }}>{glyph(symbol)}<span>{label}</span>{id === "bookings" && mine.length > 0 && <small className="nav-count">{mine.length}</small>}</button>)}</nav>
       <div className="side-bottom"><div className="help-row"><b>?</b><span>Need a hand?<small>Contact your IT admin</small></span></div><div className="profile"><span className="avatar">{actor?.full_name.split(" ").map(x => x[0]).slice(0,2).join("").toUpperCase() || "?"}</span><span>{actor?.full_name || "No staff registered"}<small>{actor?.role === "admin" ? "Team administrator" : "Team member"}</small></span></div></div>
     </aside>
-    <main className="main"><header className="topbar"><div className="crumb">Workspace <span>/</span> <strong>{nav.find(x => x[0] === tab)?.[1]}</strong></div><label className="actor-picker">Using <select aria-label="Act as user" value={actor?.id || ""} onChange={e => setActorId(e.target.value)}>{data.users.map(u => <option value={u.id} key={u.id}>{u.full_name}{u.role === "admin" ? " · Admin" : ""}</option>)}</select></label></header>
+    <main className="main"><header className="topbar"><div className="crumb">Workspace <span>/</span> <strong>{nav.find(x => x[0] === tab)?.[1]}</strong></div><div className="actor-picker">Signed in as <strong>{actor?.full_name || "Loading"}</strong><form action={signOut}><button className="link-action">Sign out</button></form></div></header>
       <div className="content">
         {loadError && <div className="error-banner"><div><b>Can’t connect to booking data</b><span>{loadError}</span></div><button className="btn secondary small" onClick={() => void reload()}>Retry</button></div>}
         {(error || message) && <div className={error ? "alert alert-error" : "alert alert-ok"} role="status">{error || message}<button onClick={() => {setError("");setMessage("");}}>×</button></div>}

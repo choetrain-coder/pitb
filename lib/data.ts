@@ -43,9 +43,6 @@ export async function getWorkspaceData(teamId?: string): Promise<WorkspaceData> 
   };
 }
 
-export async function writeAuditEntry(entry: { team_id: string; booking_id: string | null; action: string; actor_user_id: string | null; changes: Record<string, unknown> }) {
-  const supabase = await createClient(); return supabase.from("audit_logs").insert(entry);
-}
 export async function insertBookingRow(input: { team_id: string; room_id: string; booked_by_user_id: string; title: string; start_time: string; end_time: string; status: "confirmed" }) {
   const supabase = await createClient(); return supabase.from("bookings").insert(input).select("id").single();
 }
@@ -61,13 +58,13 @@ export async function setRoomActiveRow(teamId: string, id: string, is_active: bo
 }
 export async function insertPerson(input: { teamId: string; email: string; full_name: string; role: "staff" | "admin" }) {
   const supabase = await createClient();
-  const { data: existing, error: lookupError } = await supabase.from("users").select("id").eq("email", input.email).maybeSingle();
-  if (lookupError) return { error: lookupError, data: null };
-  const { data: person, error } = existing
-    ? { data: existing, error: null }
-    : await supabase.from("users").insert({ email: input.email, full_name: input.full_name, role: input.role }).select("id").single();
-  if (error || !person) return { error, data: null };
-  return supabase.from("team_members").upsert({ team_id: input.teamId, user_id: person.id, role: input.role }, { onConflict: "team_id,user_id" });
+  const { error } = await supabase.rpc("register_team_user", {
+    target_team: input.teamId,
+    user_email: input.email,
+    user_name: input.full_name,
+    user_role: input.role,
+  });
+  return { error, data: error ? null : true };
 }
 export async function saveDelegation(input: { team_id: string; delegator_user_id: string; delegate_user_id: string }) {
   const supabase = await createClient(); return supabase.from("delegations").upsert({ ...input, is_active: true }, { onConflict: "team_id,delegator_user_id,delegate_user_id" });
@@ -77,9 +74,7 @@ export async function revokeDelegation(teamId: string, delegatorId: string, dele
 }
 export async function createTeam(name: string, actorId: string) {
   const supabase = await createClient();
-  const { data: team, error } = await supabase.from("teams").insert({ name }).select("id,name").single();
-  if (error || !team) return { data: null, error };
-  const { error: memberError } = await supabase.from("team_members").insert({ team_id: team.id, user_id: actorId, role: "admin" });
-  if (memberError) return { data: null, error: memberError };
-  return { data: team as Team, error: null };
+  void actorId;
+  const { data, error } = await supabase.rpc("create_team_workspace", { team_name: name });
+  return { data: data as Team | null, error };
 }

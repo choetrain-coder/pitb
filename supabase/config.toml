@@ -1,0 +1,25 @@
+project_id = "pitb"
+
+[auth]
+additional_redirect_urls = ["http://localhost:3000/auth/callback", "https://pitb-ten.vercel.app/auth/callback"]
+site_url = "https://pitb-ten.vercel.app"
+
+[auth.email]
+enable_confirmations = true
+max_frequency = "1m0s"
+otp_length = 8
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[db.pooler]
+default_pool_size = 15
+max_client_conn = 200
+
+[storage.analytics]
+enabled = true
+max_namespaces = 10
+
+[storage.image_transformation]
+enabled = true
